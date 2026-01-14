@@ -1,1 +1,28 @@
-<!-- Your HTML goes here -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boston 311 Calls - Top 10 Reasons</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Boston 311 Service Requests</h1>
+        <p>The Top 10 Most Common Issues Reported in 2025</p>
+        <button id="toggleBtn" class="toggle-button">Show All Reasons</button>
+    </header>
+    
+    <div id="chart-container">
+        <svg id="chart"></svg>
+    </div>
+
+    <footer id="attribution">
+        <p><strong>Data Source:</strong> Boston 311 Service Requests from <a href="https://data.boston.gov/dataset/311-service-requests" target="_blank">City of Boston Data Portal</a></p>
+        <p><strong>Chart Created by:</strong> Tahseen Jahan & Aigerim</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

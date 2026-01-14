@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boston 311 Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 3em;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 1.3em;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .controls {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .controls label {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .controls select {
+            padding: 10px 15px;
+            font-size: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 250px;
+        }
+
+        .controls select:hover {
+            border-color: #3498db;
+        }
+
+        .controls select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+        }
+
+        #chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            max-width: 1200px;
+            margin: 0 auto 40px;
+        }
+
+        svg {
+            width: 100%;
+            height: 500px;
+            display: block;
+        }
+
+        .bar {
+            transition: all 0.3s ease;
+        }
+
+        .bar:hover {
+            opacity: 0.7;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        }
+
+        #stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto 40px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card p {
+            font-size: 2.5em;
+            color: #3498db;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        footer {
+            margin-top: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+            border-top: 2px solid #e0e0e0;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        footer p {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        footer a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .controls select {
+                width: 100%;
+            }
+
+            svg {
+                height: 400px;
+            }
+        }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Boston 311 Dashboard</h1>
+        <p>Interactive Analysis of Service Requests Over Time</p>
+    </header>
+
+    <div class="controls">
+        <label for="reasonFilter">Filter by Complaint Type:</label>
+        <select id="reasonFilter">
+            <option value="">All Complaint Types</option>
+        </select>
+    </div>
+
+    <div id="chart-container">
+        <svg id="timeChart"></svg>
+    </div>
+
+    <div id="stats-container">
+        <div class="stat-card">
+            <h3>Total Complaints</h3>
+            <p id="totalComplaints">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>Most Common Type</h3>
+            <p id="mostCommon">-</p>
+        </div>
+        <div class="stat-card">
+            <h3>Least Common Type</h3>
+            <p id="leastCommon">-</p>
+        </div>
+    </div>
+
+    <footer>
+        <p><strong>Data Source:</strong> Boston 311 Service Requests from <a href="https://data.boston.gov/dataset/311-service-requests" target="_blank">City of Boston Data Portal</a></p>
+        <p><strong>Dashboard Created by:</strong> Tahseen Jahan & Aigerim</p>
+    </footer>
+
+    <script>
+        // Load and process the data from 311_boston_data.csv
+        d3.csv('./answers/311_boston_data.csv').then(rawData => {
+            // Parse dates and extract month information
+            rawData.forEach(d => {
+                // Handle different date formats
+                const dateStr = d.open_dt || d['Open Dt'] || d.date || d['Date'] || '';
+                if (dateStr) {
+                    const date = new Date(dateStr);
+                    if (!isNaN(date.getTime())) {
+                        d.date = date;
+                        d.month = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+                    }
+                }
+            });
+
+            // Filter out records without dates
+            const validData = rawData.filter(d => d.date && d.month);
+
+            // Get unique complaint reasons for the dropdown
+            const reasonColumns = ['reason', 'Reason', 'complaint_type', 'Complaint Type', 'type', 'Type'];
+            let reasonColumn = 'reason';
+            
+            for (let col of reasonColumns) {
+                if (rawData.length > 0 && rawData[0][col]) {
+                    reasonColumn = col;
+                    break;
+                }
+            }
+
+            const reasons = Array.from(new Set(validData.map(d => d[reasonColumn] || 'Unknown')))
+                .filter(r => r && r !== 'Unknown')
+                .sort();
+
+            // Populate the dropdown
+            const select = document.getElementById('reasonFilter');
+            reasons.forEach(reason => {
+                const option = document.createElement('option');
+                option.value = reason;
+                option.textContent = reason;
+                select.appendChild(option);
+            });
+
+            // Function to aggregate data by month
+            function aggregateByMonth(data) {
+                const monthMap = {};
+                data.forEach(d => {
+                    if (d.month) {
+                        if (!monthMap[d.month]) {
+                            monthMap[d.month] = 0;
+                        }
+                        monthMap[d.month]++;
+                    }
+                });
+                
+                // Convert to array and sort chronologically
+                return Object.entries(monthMap)
+                    .map(([month, count]) => ({ month, count }))
+                    .sort((a, b) => new Date(a.month) - new Date(b.month));
+            }
+
+            // Function to get statistics
+            function getStats(data) {
+                const total = data.length;
+                const reasons = {};
+                data.forEach(d => {
+                    const reason = d[reasonColumn] || 'Unknown';
+                    reasons[reason] = (reasons[reason] || 0) + 1;
+                });
+
+                const sorted = Object.entries(reasons).sort((a, b) => b[1] - a[1]);
+                const most = sorted[0]?.[0] || 'N/A';
+                const least = sorted[sorted.length - 1]?.[0] || 'N/A';
+
+                return { total, most, least };
+            }
+
+            // Function to update the visualization
+            function updateDashboard(filterReason = '') {
+                let filteredData = validData;
+                
+                if (filterReason) {
+                    filteredData = validData.filter(d => d[reasonColumn] === filterReason);
+                }
+
+                // Aggregate by month
+                const monthData = aggregateByMonth(filteredData);
+
+                // Update statistics
+                const stats = getStats(filteredData);
+                document.getElementById('totalComplaints').textContent = stats.total.toLocaleString();
+                document.getElementById('mostCommon').textContent = stats.most;
+                document.getElementById('leastCommon').textContent = stats.least;
+
+                // Update chart
+                drawTimeChart(monthData);
+            }
+
+            // Function to draw the time chart
+            function drawTimeChart(data) {
+                const margin = { top: 30, right: 40, bottom: 80, left: 70 };
+                const width = 1100 - margin.left - margin.right;
+                const height = 500 - margin.top - margin.bottom;
+
+                const svg = d3.select('#timeChart');
+                svg.selectAll('*').remove();
+
+                const g = svg
+                    .attr('viewBox', [0, 0, width + margin.left + margin.right, height + margin.top + margin.bottom])
+                    .append('g')
+                    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+                // Create scales
+                const xScale = d3
+                    .scaleBand()
+                    .domain(data.map(d => d.month))
+                    .range([0, width])
+                    .padding(0.1);
+
+                const yScale = d3
+                    .scaleLinear()
+                    .domain([0, d3.max(data, d => d.count)])
+                    .range([height, 0]);
+
+                // Create bars with gradient colors
+                const colors = d3.scaleSequential(d3.interpolateBlues).domain([0, data.length]);
+
+                g.selectAll('.bar')
+                    .data(data)
+                    .enter()
+                    .append('rect')
+                    .attr('class', 'bar')
+                    .attr('x', d => xScale(d.month))
+                    .attr('y', d => yScale(d.count))
+                    .attr('width', xScale.bandwidth())
+                    .attr('height', d => height - yScale(d.count))
+                    .attr('fill', (d, i) => colors(i))
+                    .on('mouseover', function(event, d) {
+                        d3.select(this).attr('opacity', 0.9);
+
+                        // Show tooltip
+                        g.append('text')
+                            .attr('class', 'bar-label')
+                            .attr('x', xScale(d.month) + xScale.bandwidth() / 2)
+                            .attr('y', yScale(d.count) - 10)
+                            .attr('text-anchor', 'middle')
+                            .attr('fill', '#2c3e50')
+                            .attr('font-weight', 'bold')
+                            .style('font-size', '14px')
+                            .text(d.count.toLocaleString());
+                    })
+                    .on('mouseout', function() {
+                        d3.select(this).attr('opacity', 1);
+                        g.selectAll('.bar-label').remove();
+                    });
+
+                // Add X axis
+                const xAxis = g
+                    .append('g')
+                    .attr('class', 'x-axis axis')
+                    .attr('transform', `translate(0,${height})`)
+                    .call(d3.axisBottom(xScale));
+
+                xAxis
+                    .selectAll('text')
+                    .attr('text-anchor', 'end')
+                    .attr('dy', '0.15em')
+                    .attr('transform', 'rotate(-45)')
+                    .style('font-size', '12px');
+
+                // Add Y axis
+                g
+                    .append('g')
+                    .attr('class', 'y-axis axis')
+                    .call(d3.axisLeft(yScale).tickFormat(d => d.toLocaleString()))
+                    .style('font-size', '12px');
+
+                // Add Y axis label
+                g
+                    .append('text')
+                    .attr('transform', 'rotate(-90)')
+                    .attr('y', 0 - margin.left)
+                    .attr('x', 0 - height / 2)
+                    .attr('dy', '1em')
+                    .style('text-anchor', 'middle')
+                    .style('font-size', '16px')
+                    .style('font-weight', 'bold')
+                    .text('Number of Complaints');
+
+                // Add X axis label
+                g
+                    .append('text')
+                    .attr('x', width / 2)
+                    .attr('y', height + 70)
+                    .style('text-anchor', 'middle')
+                    .style('font-size', '16px')
+                    .style('font-weight', 'bold')
+                    .text('Month');
+            }
+
+            // Initial chart
+            updateDashboard();
+
+            // Filter event listener
+            document.getElementById('reasonFilter').addEventListener('change', function() {
+                updateDashboard(this.value);
+            });
+
+        }).catch(error => {
+            console.error('Error loading data:', error);
+            document.getElementById('chart-container').innerHTML = 
+                '<p style="color: red; text-align: center; padding: 40px;">Error loading data. Please make sure 311_boston_data.csv is in the answers folder.</p>';
+        });
+    </script>
+</body>
+</html>
